@@ -1,0 +1,161 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Jinja SQL",
+  "scopeName": "source.jinja-sql",
+  "patterns": [
+    { "include": "#jinja-comment" },
+    { "include": "#jinja-expression" },
+    { "include": "#jinja-statement" },
+    { "include": "#sql" }
+  ],
+  "repository": {
+    "jinja-comment": {
+      "name": "comment.block.jinja",
+      "begin": "\\{#",
+      "end": "#\\}",
+      "patterns": [
+        { "name": "comment.block.jinja", "match": "." }
+      ]
+    },
+    "jinja-expression": {
+      "name": "meta.expression.jinja",
+      "begin": "\\{\\{",
+      "end": "\\}\\}",
+      "beginCaptures": { "0": { "name": "punctuation.definition.expression.begin.jinja" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.expression.end.jinja" } },
+      "patterns": [
+        { "include": "#jinja-string" },
+        {
+          "name": "support.function.jinja",
+          "match": "\\b(current_username|current_user_id|url_param|filter_values|cache_key_wrapper|timeseries_limit_metric)\\b"
+        },
+        {
+          "name": "support.function.builtin.jinja",
+          "match": "\\b(range|loop|cycler|joiner|lipsum|dict)\\b"
+        },
+        {
+          "name": "constant.numeric.jinja",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        },
+        {
+          "name": "constant.language.jinja",
+          "match": "\\b(true|false|none|True|False|None)\\b"
+        },
+        {
+          "name": "keyword.operator.jinja",
+          "match": "\\b(not|and|or|is|in)\\b|[+\\-*/%=<>!|~]"
+        },
+        {
+          "name": "variable.other.jinja",
+          "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+        }
+      ]
+    },
+    "jinja-statement": {
+      "name": "meta.statement.jinja",
+      "begin": "\\{%[-~]?",
+      "end": "[-~]?%\\}",
+      "beginCaptures": { "0": { "name": "punctuation.definition.statement.begin.jinja" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.statement.end.jinja" } },
+      "patterns": [
+        { "include": "#jinja-string" },
+        {
+          "name": "keyword.control.jinja",
+          "match": "\\b(if|elif|else|endif|for|endfor|set|macro|endmacro|call|endcall|block|endblock|filter|endfilter|include|import|from|extends|raw|endraw|do)\\b"
+        },
+        {
+          "name": "keyword.operator.jinja",
+          "match": "\\b(not|and|or|is|in)\\b|[+\\-*/%=<>!|~]"
+        },
+        {
+          "name": "constant.numeric.jinja",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        },
+        {
+          "name": "constant.language.jinja",
+          "match": "\\b(true|false|none|True|False|None)\\b"
+        },
+        {
+          "name": "variable.other.jinja",
+          "match": "[a-zA-Z_][a-zA-Z0-9_]*"
+        }
+      ]
+    },
+    "jinja-string": {
+      "patterns": [
+        {
+          "name": "string.quoted.single.jinja",
+          "begin": "'",
+          "end": "'",
+          "patterns": [{ "name": "constant.character.escape.jinja", "match": "\\\\." }]
+        },
+        {
+          "name": "string.quoted.double.jinja",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [{ "name": "constant.character.escape.jinja", "match": "\\\\." }]
+        }
+      ]
+    },
+    "sql": {
+      "patterns": [
+        {
+          "name": "comment.line.double-dash.sql",
+          "match": "--(?!\\s*database:).*$"
+        },
+        {
+          "name": "meta.magic-comment.database.jinja-sql",
+          "match": "^--\\s*database:\\s*(.+)$",
+          "captures": { "1": { "name": "string.unquoted.database-name.jinja-sql" } }
+        },
+        {
+          "name": "comment.block.sql",
+          "begin": "/\\*",
+          "end": "\\*/"
+        },
+        {
+          "name": "string.quoted.single.sql",
+          "begin": "'",
+          "end": "'",
+          "patterns": [{ "name": "constant.character.escape.sql", "match": "''" }]
+        },
+        {
+          "name": "constant.numeric.sql",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        },
+        {
+          "name": "keyword.other.DML.sql",
+          "match": "(?i)\\b(SELECT|INSERT|UPDATE|DELETE|MERGE|UPSERT|TRUNCATE)\\b"
+        },
+        {
+          "name": "keyword.other.DDL.sql",
+          "match": "(?i)\\b(CREATE|ALTER|DROP|RENAME)\\b"
+        },
+        {
+          "name": "keyword.other.sql",
+          "match": "(?i)\\b(FROM|WHERE|AND|OR|NOT|IN|EXISTS|BETWEEN|LIKE|ILIKE|IS|NULL|AS|ON|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|NATURAL|USING|GROUP|BY|ORDER|ASC|DESC|HAVING|LIMIT|OFFSET|UNION|ALL|INTERSECT|EXCEPT|DISTINCT|CASE|WHEN|THEN|ELSE|END|CAST|WITH|RECURSIVE|OVER|PARTITION|ROW_NUMBER|RANK|DENSE_RANK|WINDOW|VALUES|INTO|SET|TABLE|VIEW|INDEX|CONSTRAINT|PRIMARY|KEY|FOREIGN|REFERENCES|DEFAULT|CHECK|UNIQUE|GRANT|REVOKE|SCHEMA|DATABASE|IF|REPLACE|TEMPORARY|TEMP|MATERIALIZED|EXPLAIN|ANALYZE|LATERAL|UNNEST|PIVOT|UNPIVOT|QUALIFY|CONNECT|START|PRIOR|FETCH|NEXT|ROWS|ONLY|PERCENT|TIES|NULLS|FIRST|LAST|TABLESAMPLE|SAMPLE)\\b"
+        },
+        {
+          "name": "storage.type.sql",
+          "match": "(?i)\\b(INT|INTEGER|BIGINT|SMALLINT|TINYINT|FLOAT|DOUBLE|DECIMAL|NUMERIC|REAL|BOOLEAN|BOOL|VARCHAR|CHAR|TEXT|STRING|DATE|TIME|TIMESTAMP|DATETIME|BINARY|VARBINARY|BLOB|CLOB|ARRAY|MAP|STRUCT|VARIANT|OBJECT|NUMBER)\\b"
+        },
+        {
+          "name": "support.function.aggregate.sql",
+          "match": "(?i)\\b(COUNT|SUM|AVG|MIN|MAX|ARRAY_AGG|LISTAGG|STRING_AGG|GROUP_CONCAT|MEDIAN|PERCENTILE_CONT|PERCENTILE_DISC|STDDEV|VARIANCE|CORR|COVAR_POP|COVAR_SAMP)\\b"
+        },
+        {
+          "name": "support.function.scalar.sql",
+          "match": "(?i)\\b(COALESCE|NULLIF|NVL|IFF|IFNULL|DECODE|GREATEST|LEAST|ABS|CEIL|CEILING|FLOOR|ROUND|TRUNC|MOD|POWER|SQRT|SIGN|LN|LOG|EXP|LENGTH|LEN|UPPER|LOWER|TRIM|LTRIM|RTRIM|SUBSTRING|SUBSTR|CONCAT|REPLACE|REVERSE|LPAD|RPAD|SPLIT_PART|REGEXP_REPLACE|REGEXP_SUBSTR|REGEXP_COUNT|TO_CHAR|TO_DATE|TO_TIMESTAMP|TO_NUMBER|TRY_CAST|TRY_TO_DATE|TRY_TO_NUMBER|CURRENT_DATE|CURRENT_TIMESTAMP|CURRENT_TIME|GETDATE|SYSDATE|DATEADD|DATEDIFF|DATE_TRUNC|DATE_PART|EXTRACT|YEAR|MONTH|DAY|HOUR|MINUTE|SECOND|DAYOFWEEK|DAYOFYEAR|WEEK|QUARTER|LAST_DAY|ADD_MONTHS|MONTHS_BETWEEN|ROW_NUMBER|RANK|DENSE_RANK|NTILE|LAG|LEAD|FIRST_VALUE|LAST_VALUE|NTH_VALUE|PARSE_JSON|TRY_PARSE_JSON|OBJECT_CONSTRUCT|ARRAY_CONSTRUCT|FLATTEN|GET|GET_PATH|HASH|MD5|SHA1|SHA2|UUID_STRING|RANDOM|UNIFORM|SEQ|GENERATOR)\\b"
+        },
+        {
+          "name": "constant.language.sql",
+          "match": "(?i)\\b(TRUE|FALSE|NULL)\\b"
+        },
+        {
+          "name": "keyword.operator.sql",
+          "match": "[+\\-*/%=<>!&|^~]|<>|!=|>=|<=|\\|\\||::|->"
+        }
+      ]
+    }
+  }
+}

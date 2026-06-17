@@ -1,0 +1,11 @@
+-- database: Snowflake - EAGLEEYE
+{% set days = 30 %}
+{# filter by recent entries #}
+SELECT
+    requester,
+    COUNT(*) AS request_count
+FROM {{ schema }}.adhoc_log
+WHERE created_at >= DATEADD('day', -{{ days }}, CURRENT_DATE())
+  AND requester = '{{ current_username() }}'
+GROUP BY 1
+ORDER BY 2 DESC
