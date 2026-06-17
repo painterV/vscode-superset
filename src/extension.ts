@@ -21,7 +21,7 @@ import { ResultsPanel } from "./views/resultsPanel";
 
 const LANG_SELECTOR: vscode.DocumentSelector = { language: "jinja-sql" };
 
-let activeAuth: AuthManager | null = null;
+let activeAuth: AuthManager | null = null; // eslint-disable-line @typescript-eslint/no-unused-vars
 let activeClient: SupersetClient | null = null;
 let statusBarItem: vscode.StatusBarItem;
 

@@ -1,11 +1,20 @@
 -- database: Snowflake - EAGLEEYE
 {% set days = 30 %}
-{# filter by recent entries #}
+{# Weekly adhoc request summary #}
 SELECT
     requester,
-    COUNT(*) AS request_count
+    category,
+    COUNT(*) AS request_count,
+    MIN(created_at) AS first_request,
+    MAX(created_at) AS last_request
 FROM {{ schema }}.adhoc_log
 WHERE created_at >= DATEADD('day', -{{ days }}, CURRENT_DATE())
   AND requester = '{{ current_username() }}'
-GROUP BY 1
-ORDER BY 2 DESC
+{% if include_resolved %}
+  AND status IN ('open', 'resolved')
+{% else %}
+  AND status = 'open'
+{% endif %}
+GROUP BY 1, 2
+ORDER BY request_count DESC
+LIMIT {{ url_param('limit', 100) }}
