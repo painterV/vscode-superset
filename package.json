@@ -1,0 +1,133 @@
+{
+  "name": "vscode-superset",
+  "displayName": "Superset",
+  "description": "Connect to Apache Superset — Jinja-SQL editing, query execution, object browser",
+  "version": "0.0.1",
+  "publisher": "wenbaoli",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": ["Programming Languages", "Data Science", "Other"],
+  "activationEvents": [
+    "onLanguage:jinja-sql",
+    "onCommand:superset.connect"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "jinja-sql",
+        "aliases": ["Jinja SQL", "jinja-sql"],
+        "extensions": [".jinjasql"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jinja-sql",
+        "scopeName": "source.jinja-sql",
+        "path": "./syntaxes/jinja-sql.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      { "command": "superset.connect", "title": "Superset: Connect" },
+      { "command": "superset.disconnect", "title": "Superset: Disconnect" },
+      { "command": "superset.switchConnection", "title": "Superset: Switch Connection" },
+      { "command": "superset.execute", "title": "Superset: Run Query" },
+      { "command": "superset.estimate", "title": "Superset: Estimate Query Cost" },
+      { "command": "superset.formatSql", "title": "Superset: Format SQL" },
+      { "command": "superset.saveQuery", "title": "Superset: Save as Saved Query" },
+      { "command": "superset.refreshConnections", "title": "Superset: Refresh" }
+    ],
+    "keybindings": [
+      { "command": "superset.execute", "key": "cmd+enter", "when": "editorLangId == jinja-sql" },
+      { "command": "superset.estimate", "key": "cmd+shift+e", "when": "editorLangId == jinja-sql" },
+      { "command": "superset.formatSql", "key": "cmd+shift+f", "when": "editorLangId == jinja-sql" }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "superset-explorer",
+          "title": "Superset",
+          "icon": "media/superset.svg"
+        }
+      ]
+    },
+    "views": {
+      "superset-explorer": [
+        { "id": "supersetConnections", "name": "Connections" },
+        { "id": "supersetSavedQueries", "name": "Saved Queries" },
+        { "id": "supersetDashboards", "name": "Dashboards" }
+      ]
+    },
+    "configuration": {
+      "title": "Superset",
+      "properties": {
+        "superset.connections": {
+          "type": "array",
+          "default": [],
+          "description": "Superset connection configurations",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "description": "Connection display name" },
+              "url": { "type": "string", "description": "Superset base URL (e.g. https://superset.company.com)" },
+              "username": { "type": "string", "description": "Login username" }
+            },
+            "required": ["name", "url", "username"]
+          }
+        },
+        "superset.defaultDatabase": {
+          "type": "string",
+          "default": "",
+          "description": "Default database name for query execution"
+        },
+        "superset.resultPageSize": {
+          "type": "number",
+          "default": 50,
+          "description": "Rows per page in results panel"
+        },
+        "superset.maxResultTabs": {
+          "type": "number",
+          "default": 5,
+          "description": "Max result tabs kept in memory"
+        },
+        "superset.schemaCacheTtlSeconds": {
+          "type": "number",
+          "default": 300,
+          "description": "Cache TTL for schema/table lists (seconds)"
+        },
+        "superset.queryTimeoutSeconds": {
+          "type": "number",
+          "default": 30,
+          "description": "Show progress notification after this many seconds"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "npm run check-types && node esbuild.js",
+    "check-types": "tsc --noEmit",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "vscode:prepublish": "npm run package",
+    "package": "npm run check-types && node esbuild.js --production",
+    "test": "node ./out/test/runTest.js",
+    "lint": "eslint src/"
+  },
+  "devDependencies": {
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.95.0",
+    "@vscode/test-electron": "^2.4.1",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.0.0",
+    "glob": "^11.0.0",
+    "mocha": "^11.0.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.7.0"
+  }
+}
