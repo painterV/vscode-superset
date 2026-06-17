@@ -107,7 +107,8 @@
     }
   },
   "scripts": {
-    "compile": "npm run check-types && node esbuild.js",
+    "compile": "npm run check-types && node esbuild.js && npm run compile-tests",
+    "compile-tests": "tsc --project tsconfig.json --outDir out --declaration false --sourceMap false",
     "check-types": "tsc --noEmit",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
