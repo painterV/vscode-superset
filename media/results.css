@@ -1,0 +1,104 @@
+:root {
+  --bg: var(--vscode-editor-background);
+  --fg: var(--vscode-editor-foreground);
+  --border: var(--vscode-panel-border);
+  --header-bg: var(--vscode-editorGroupHeader-tabsBackground);
+  --hover-bg: var(--vscode-list-hoverBackground);
+  --btn-bg: var(--vscode-button-background);
+  --btn-fg: var(--vscode-button-foreground);
+}
+
+body {
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--fg);
+  background: var(--bg);
+  margin: 0;
+  padding: 8px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 4px 0;
+}
+
+.toolbar .info {
+  opacity: 0.8;
+}
+
+.toolbar button {
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  border: none;
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  margin-left: 4px;
+}
+
+.toolbar button:hover {
+  opacity: 0.9;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+th {
+  background: var(--header-bg);
+  position: sticky;
+  top: 0;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+th:hover {
+  background: var(--hover-bg);
+}
+
+th .sort-indicator {
+  margin-left: 4px;
+  opacity: 0.6;
+}
+
+td {
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+tr:hover td {
+  background: var(--hover-bg);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 8px 0;
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.error {
+  color: var(--vscode-errorForeground);
+  padding: 16px;
+  white-space: pre-wrap;
+}
