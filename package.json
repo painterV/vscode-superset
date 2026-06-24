@@ -71,8 +71,26 @@
       {
         "command": "superset.refreshConnections",
         "title": "Superset: Refresh"
+      },
+      {
+        "command": "superset.addConnection",
+        "title": "Add Connection",
+        "icon": "$(add)"
+      },
+      {
+        "command": "superset.openChartSql",
+        "title": "View Chart SQL"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "superset.addConnection",
+          "when": "view == supersetConnections",
+          "group": "navigation"
+        }
+      ]
+    },
     "keybindings": [
       {
         "command": "superset.execute",

@@ -38,7 +38,7 @@ class ChartItem extends vscode.TreeItem {
     this.command = {
       command: "superset.openChartSql",
       title: "View Chart SQL",
-      arguments: [this],
+      arguments: [{ chartId, label, dashboardId }],
     };
   }
 }

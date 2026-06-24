@@ -283,6 +283,26 @@ export function activate(context: vscode.ExtensionContext): void {
         edit.insert(editor.selection.active, tableName);
       });
     }),
+
+    vscode.commands.registerCommand("superset.openChartSql", async (args: { chartId: number; label: string }) => {
+      if (!activeClient) {
+        vscode.window.showWarningMessage("Not connected to Superset.");
+        return;
+      }
+      const chartsApi = new ChartsApi(activeClient);
+      try {
+        const chart = await chartsApi.get(args.chartId);
+        const sql = chart.query || "-- No SQL query associated with this chart";
+        const doc = await vscode.workspace.openTextDocument({ content: sql, language: "jinja-sql" });
+        await vscode.window.showTextDocument(doc, { preview: true });
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`Failed to load chart SQL: ${err.message}`);
+      }
+    }),
+
+    vscode.commands.registerCommand("superset.addConnection", () => {
+      vscode.commands.executeCommand("workbench.action.openSettings", "superset.connections");
+    }),
   );
 
   context.subscriptions.push(statusBarItem, outputChannel, resultsPanel);

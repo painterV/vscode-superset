@@ -38,7 +38,7 @@ export class ConnectionNode extends vscode.TreeItem {
         this.command = {
           command: "superset.insertTableName",
           title: "Insert Table Name",
-          arguments: [this],
+          arguments: [{ label, nodeType, dbId, schema }],
         };
         break;
     }
