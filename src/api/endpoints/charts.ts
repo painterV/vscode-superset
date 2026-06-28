@@ -12,6 +12,17 @@ export interface Chart {
 export interface ChartDetail extends Chart {
   query: string;
   datasource_name_text: string;
+  params: string;
+  query_context: string | null;
+}
+
+export interface ChartCreatePayload {
+  slice_name: string;
+  viz_type: string;
+  datasource_id: number;
+  datasource_type: string;
+  params: string;
+  query_context?: string;
 }
 
 /**
@@ -33,5 +44,15 @@ export class ChartsApi {
   async get(id: number): Promise<ChartDetail> {
     const resp = await this.client.get<{ result: ChartDetail }>(`/api/v1/chart/${id}`);
     return resp.result;
+  }
+
+  /** Create a new chart. Returns the new chart id. */
+  async create(payload: ChartCreatePayload): Promise<{ id: number }> {
+    return this.client.post<{ id: number }>("/api/v1/chart/", payload);
+  }
+
+  /** Delete a chart by id. */
+  async delete(id: number): Promise<void> {
+    await this.client.del(`/api/v1/chart/${id}`);
   }
 }
