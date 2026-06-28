@@ -13,6 +13,11 @@ export interface QueryResult {
   query: { rows: number; duration: string };
 }
 
+/** Raw execute response: `columns` may be objects, normalized by `execute()`. */
+interface RawQueryResult extends Omit<QueryResult, "columns"> {
+  columns: Array<string | QueryResultColumn>;
+}
+
 export interface EstimateResult {
   result: Array<{ End_time: string; Start_time: string; Total_extra_info: string }>;
 }
@@ -25,12 +30,21 @@ export class SqlLabApi {
 
   /** Execute a SQL query synchronously. */
   async execute(databaseId: number, sql: string, schema?: string): Promise<QueryResult> {
-    return this.client.post<QueryResult>("/api/v1/sqllab/execute/", {
+    // Superset returns `columns` as objects ({column_name, name, type, ...}),
+    // but data rows are keyed by `name`. Normalize to the string names the
+    // rest of the extension (results table, CSV export, preview) expects.
+    const raw = await this.client.post<RawQueryResult>("/api/v1/sqllab/execute/", {
       database_id: databaseId,
       sql,
       schema: schema ?? undefined,
       runAsync: false,
     });
+    return {
+      ...raw,
+      columns: (raw.columns ?? []).map((c) =>
+        typeof c === "string" ? c : c.name,
+      ),
+    };
   }
 
   /** Estimate the cost of running a SQL query. */

@@ -18,6 +18,7 @@ export class AuthManager {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
   private csrfToken: string | null = null;
+  private cookieHeader: string | null = null;
   private readonly baseUrl: string;
   private readonly connection: ConnectionConfig;
   private readonly secrets: vscode.SecretStorage;
@@ -54,6 +55,7 @@ export class AuthManager {
         (body as any).message ?? `Login failed (HTTP ${resp.status})`
       );
     }
+    this.captureCookies(resp);
     const data = (await resp.json()) as {
       access_token: string;
       refresh_token: string;
@@ -96,9 +98,35 @@ export class AuthManager {
       }
     );
     if (resp.ok) {
+      // The session cookie set here is what the CSRF token is bound to, so it
+      // must be captured and resent on mutating requests.
+      this.captureCookies(resp);
       const data = (await resp.json()) as { result: string };
       this.csrfToken = data.result;
     }
+  }
+
+  /**
+   * Capture Set-Cookie values from a response into a single `Cookie` header
+   * string (name=value pairs), so they can be replayed on later requests.
+   */
+  private captureCookies(resp: Response): void {
+    const headers = resp.headers as Headers & { getSetCookie?: () => string[] };
+    const list =
+      typeof headers.getSetCookie === "function"
+        ? headers.getSetCookie()
+        : headers.get("set-cookie")
+          ? [headers.get("set-cookie") as string]
+          : [];
+    const pairs = list.map((c) => c.split(";")[0].trim()).filter(Boolean);
+    if (pairs.length > 0) {
+      this.cookieHeader = pairs.join("; ");
+    }
+  }
+
+  /** Return the captured Cookie header (e.g. "session=..."), or null. */
+  getCookieHeader(): string | null {
+    return this.cookieHeader;
   }
 
   /** Publicly refresh the CSRF token (called by SupersetClient on CSRF errors). */

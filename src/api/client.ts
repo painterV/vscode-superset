@@ -93,7 +93,7 @@ export class SupersetClient {
 
     if (resp.status === 400) {
       const errBody = await resp.json().catch(() => ({}));
-      const msg = String((errBody as any).message ?? "");
+      const msg = extractApiMessage(errBody);
       if (msg.includes("CSRF")) {
         // Refresh CSRF token and retry exactly once
         await this.auth.refreshCsrfToken();
@@ -118,6 +118,11 @@ export class SupersetClient {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     };
+    // Superset binds the CSRF token to the session cookie, so both must be sent.
+    const cookie = this.auth.getCookieHeader();
+    if (cookie) {
+      headers["Cookie"] = cookie;
+    }
     if (includeCsrf) {
       const csrf = this.auth.getCsrfToken();
       if (csrf) {
@@ -139,7 +144,20 @@ export class SupersetClient {
   private async throwApiError(resp: Response): Promise<never> {
     const body = await resp.json().catch(() => ({}));
     throw new Error(
-      (body as any).message ?? `Superset API error (HTTP ${resp.status})`
+      extractApiMessage(body) || `Superset API error (HTTP ${resp.status})`
     );
   }
+}
+
+/**
+ * Pull a human-readable message out of a Superset error body, which comes in
+ * two shapes: `{ message: "..." }` or `{ errors: [{ message: "..." }] }`.
+ */
+function extractApiMessage(body: unknown): string {
+  const b = body as { message?: unknown; errors?: Array<{ message?: unknown }> };
+  if (typeof b?.message === "string") return b.message;
+  if (Array.isArray(b?.errors) && typeof b.errors[0]?.message === "string") {
+    return b.errors[0].message;
+  }
+  return "";
 }

@@ -80,6 +80,21 @@
       {
         "command": "superset.openChartSql",
         "title": "View Chart SQL"
+      },
+      {
+        "command": "superset.openChartInBrowser",
+        "title": "Open Chart in Browser",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "superset.openDashboardInBrowser",
+        "title": "Open Dashboard in Browser",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "superset.showLineage",
+        "title": "Superset: Dependency Graph",
+        "icon": "$(type-hierarchy)"
       }
     ],
     "menus": {
@@ -88,6 +103,23 @@
           "command": "superset.addConnection",
           "when": "view == supersetConnections",
           "group": "navigation"
+        },
+        {
+          "command": "superset.showLineage",
+          "when": "view == supersetDashboards",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "superset.openChartInBrowser",
+          "when": "view == supersetDashboards && viewItem == chart",
+          "group": "inline"
+        },
+        {
+          "command": "superset.openDashboardInBrowser",
+          "when": "view == supersetDashboards && viewItem == dashboard",
+          "group": "inline"
         }
       ]
     },
@@ -187,6 +219,16 @@
           "type": "number",
           "default": 30,
           "description": "Show progress notification after this many seconds"
+        },
+        "superset.viewIn": {
+          "type": "string",
+          "enum": ["browser", "editor"],
+          "enumDescriptions": [
+            "Open charts and dashboards in your external web browser",
+            "Open inside VS Code's Simple Browser (requires TALISMAN_ENABLED = False in superset_config.py, and you must log in once inside the frame)"
+          ],
+          "default": "browser",
+          "description": "Where to open chart/dashboard deep-links"
         }
       }
     }

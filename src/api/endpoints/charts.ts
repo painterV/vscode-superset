@@ -5,6 +5,8 @@ export interface Chart {
   slice_name: string;
   viz_type: string;
   datasource_id: number;
+  datasource_type?: string;
+  dashboards?: { id: number; dashboard_title: string }[];
 }
 
 export interface ChartDetail extends Chart {

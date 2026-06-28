@@ -2,6 +2,19 @@ import * as vscode from "vscode";
 import { QueryResult } from "../api/endpoints/sqllab";
 import { getSettings } from "../utils/config";
 
+/** Quote a single CSV field per RFC 4180 when it contains a comma, quote, or newline. */
+function csvField(value: unknown): string {
+  const s = value == null ? "" : String(value);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/** Serialize columns + rows to an RFC 4180 CSV string (header row + all data rows). */
+function toCsv(columns: string[], rows: Record<string, unknown>[]): string {
+  const header = columns.map(csvField).join(",");
+  const body = rows.map((r) => columns.map((c) => csvField(r[c])).join(",")).join("\r\n");
+  return `${header}\r\n${body}\r\n`;
+}
+
 /**
  * Manages query result webview panels.
  *
@@ -80,13 +93,13 @@ export class ResultsPanel {
     });
 
     // Handle messages sent back from the webview JS.
-    panel.webview.onDidReceiveMessage((msg) => {
+    panel.webview.onDidReceiveMessage(async (msg) => {
       if (msg.type === "copy") {
         vscode.env.clipboard.writeText(msg.text);
         vscode.window.showInformationMessage("Copied to clipboard");
       }
       if (msg.type === "export") {
-        vscode.window.showInformationMessage("CSV export: use superset.exportCsv command");
+        await this.exportCsv(result, title);
       }
     });
 
@@ -124,6 +137,29 @@ export class ResultsPanel {
   <div class="error">${error}</div>
 </body>
 </html>`;
+  }
+
+  /**
+   * Write the full result set (all rows, not just the visible page) to a
+   * user-chosen .csv file via a save dialog.
+   */
+  private async exportCsv(result: QueryResult, title: string): Promise<void> {
+    const rows = result.data ?? [];
+    if (rows.length === 0) {
+      vscode.window.showInformationMessage("Nothing to export — result set is empty.");
+      return;
+    }
+
+    const safeName = title.replace(/\.[^.]+$/, "").replace(/[^\w.-]+/g, "_") || "results";
+    const target = await vscode.window.showSaveDialog({
+      defaultUri: vscode.Uri.file(`${safeName}.csv`),
+      filters: { "CSV files": ["csv"] },
+    });
+    if (!target) return;
+
+    const csv = toCsv(result.columns, rows);
+    await vscode.workspace.fs.writeFile(target, Buffer.from(csv, "utf8"));
+    vscode.window.showInformationMessage(`Exported ${rows.length} rows to ${target.fsPath}`);
   }
 
   /** Dispose all open result panels. */
