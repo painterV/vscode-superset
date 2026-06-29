@@ -22,11 +22,14 @@ import { LineagePanel, LineageModel } from "./views/lineagePanel";
 import { DatasetsApi } from "./api/endpoints/datasets";
 import { Chart } from "./api/endpoints/charts";
 import { Dataset } from "./api/endpoints/datasets";
+import { ExperimentManager } from "./experiments/experimentManager";
+import { ExperimentsTreeProvider, ExperimentItem } from "./views/experimentsTreeView";
 
 const LANG_SELECTOR: vscode.DocumentSelector = { language: "jinja-sql" };
 
 let activeAuth: AuthManager | null = null;
 let activeClient: SupersetClient | null = null;
+let activeExperimentManager: ExperimentManager | null = null;
 let statusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -42,10 +45,12 @@ export function activate(context: vscode.ExtensionContext): void {
   const connectionTree = new ConnectionTreeProvider();
   const savedQueriesTree = new SavedQueriesTreeProvider();
   const dashboardTree = new DashboardTreeProvider();
+  const experimentsTree = new ExperimentsTreeProvider();
 
   vscode.window.registerTreeDataProvider("supersetConnections", connectionTree);
   vscode.window.registerTreeDataProvider("supersetSavedQueries", savedQueriesTree);
   vscode.window.registerTreeDataProvider("supersetDashboards", dashboardTree);
+  vscode.window.registerTreeDataProvider("supersetExperiments", experimentsTree);
 
   // Language features
   const diagnosticManager = new JinjaDiagnosticManager();
@@ -153,6 +158,13 @@ export function activate(context: vscode.ExtensionContext): void {
       dashboardTree.setApis({ dashboards: dashboardsApi, charts: chartsApi }, auth.getBaseUrl());
       dashboardTree.refresh();
 
+      activeExperimentManager = new ExperimentManager(
+        context.globalState,
+        { datasets: new DatasetsApi(activeClient), charts: chartsApi, dashboards: dashboardsApi },
+        connection.name,
+      );
+      experimentsTree.setSource(() => activeExperimentManager!.list());
+
       statusBarItem.text = `$(zap) Superset: ${connection.name}`;
       outputChannel.appendLine(`Connected to ${connection.name} at ${connection.url}`);
       vscode.window.showInformationMessage(`Connected to Superset: ${connection.name}`);
@@ -161,9 +173,11 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("superset.disconnect", () => {
       activeAuth = null;
       activeClient = null;
+      activeExperimentManager = null;
       connectionTree.setDisconnected();
       savedQueriesTree.clear();
       dashboardTree.clear();
+      experimentsTree.clear();
       statusBarItem.text = "$(plug) Superset: Disconnected";
       vscode.window.showInformationMessage("Disconnected from Superset");
     }),
@@ -319,6 +333,57 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("superset.addConnection", () => {
       vscode.commands.executeCommand("workbench.action.openSettings", "superset.connections");
     }),
+
+    vscode.commands.registerCommand("superset.cloneExperiment", async () => {
+      if (!activeExperimentManager || !activeClient) {
+        vscode.window.showWarningMessage("Not connected to Superset. Run 'Superset: Connect' first.");
+        return;
+      }
+      const datasets = await new DatasetsApi(activeClient).list();
+      const pick = await vscode.window.showQuickPick(
+        datasets.map((d) => ({
+          label: d.table_name,
+          description: `${d.database.database_name}.${d.schema ?? ""}`,
+          id: d.id,
+        })),
+        { placeHolder: "Pick a virtual (SQL) dataset to clone as an experiment" },
+      );
+      if (!pick) return;
+      const label = await vscode.window.showInputBox({ prompt: "Experiment label", placeHolder: "exp1" });
+      if (!label) return;
+      try {
+        const exp = await vscode.window.withProgress(
+          { location: vscode.ProgressLocation.Notification, title: `Cloning experiment "${label}"...` },
+          () => activeExperimentManager!.clone(pick.id, label),
+        );
+        experimentsTree.refresh();
+        vscode.window.showInformationMessage(
+          `Experiment "${label}": ${exp.datasets.length} dataset, ${exp.charts.length} charts, ${exp.dashboards.length} dashboards.`,
+        );
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`Clone failed: ${err.message}`);
+      }
+    }),
+
+    vscode.commands.registerCommand("superset.deleteExperiment", async (item: ExperimentItem) => {
+      if (!activeExperimentManager || !item?.experiment) return;
+      const e = item.experiment;
+      const ok = await vscode.window.showWarningMessage(
+        `Delete experiment "${e.label}"? Removes ${e.dashboards.length} dashboards, ${e.charts.length} charts, ${e.datasets.length} dataset(s).`,
+        { modal: true },
+        "Delete",
+      );
+      if (ok !== "Delete") return;
+      const res = await activeExperimentManager.delete(e.label);
+      experimentsTree.refresh();
+      if (res.failed.length) {
+        vscode.window.showWarningMessage(`Deleted ${res.deleted}; ${res.failed.length} failed: ${res.failed.join("; ")}`);
+      } else {
+        vscode.window.showInformationMessage(`Deleted experiment "${e.label}".`);
+      }
+    }),
+
+    vscode.commands.registerCommand("superset.refreshExperiments", () => experimentsTree.refresh()),
 
     vscode.commands.registerCommand("superset.showLineage", async () => {
       if (!activeClient) {

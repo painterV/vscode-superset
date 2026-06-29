@@ -7,6 +7,15 @@ export interface Dashboard {
   status: string;
 }
 
+export interface DashboardDetail {
+  id: number;
+  dashboard_title: string;
+  // Superset returns null (not "") for unset metadata/layout — callers default.
+  position_json: string | null;
+  json_metadata: string | null;
+  css: string | null;
+}
+
 /**
  * Thin wrapper around Superset's /api/v1/dashboard/ endpoints.
  */
@@ -20,5 +29,42 @@ export class DashboardsApi {
       page_size: 100,
     });
     return resp.result;
+  }
+
+  /** Fetch one dashboard's detail, including position_json + json_metadata. */
+  async get(id: number): Promise<DashboardDetail> {
+    const resp = await this.client.get<{ result: DashboardDetail }>(`/api/v1/dashboard/${id}`);
+    return resp.result;
+  }
+
+  /**
+   * Copy a dashboard (shares the original charts; duplicate_slices is always
+   * false). The copy drops position_json — callers re-apply it via update().
+   * Returns the new dashboard id.
+   */
+  async copy(
+    id: number,
+    opts: { dashboard_title: string; json_metadata: string; css: string },
+  ): Promise<{ id: number }> {
+    const resp = await this.client.post<{ result: { id: number } }>(
+      `/api/v1/dashboard/${id}/copy/`,
+      {
+        dashboard_title: opts.dashboard_title,
+        duplicate_slices: false,
+        css: opts.css,
+        json_metadata: opts.json_metadata,
+      },
+    );
+    return resp.result;
+  }
+
+  /** Update a dashboard (used to set position_json with swapped chart refs). */
+  async update(id: number, body: { position_json?: string }): Promise<void> {
+    await this.client.put(`/api/v1/dashboard/${id}`, body);
+  }
+
+  /** Delete a dashboard by id. */
+  async delete(id: number): Promise<void> {
+    await this.client.del(`/api/v1/dashboard/${id}`);
   }
 }

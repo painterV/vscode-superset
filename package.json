@@ -95,6 +95,21 @@
         "command": "superset.showLineage",
         "title": "Superset: Dependency Graph",
         "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "superset.cloneExperiment",
+        "title": "Superset: Clone Dataset as Experiment",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "superset.deleteExperiment",
+        "title": "Delete Experiment",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "superset.refreshExperiments",
+        "title": "Refresh Experiments",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
@@ -108,6 +123,16 @@
           "command": "superset.showLineage",
           "when": "view == supersetDashboards",
           "group": "navigation"
+        },
+        {
+          "command": "superset.cloneExperiment",
+          "when": "view == supersetExperiments",
+          "group": "navigation"
+        },
+        {
+          "command": "superset.refreshExperiments",
+          "when": "view == supersetExperiments",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -119,6 +144,11 @@
         {
           "command": "superset.openDashboardInBrowser",
           "when": "view == supersetDashboards && viewItem == dashboard",
+          "group": "inline"
+        },
+        {
+          "command": "superset.deleteExperiment",
+          "when": "view == supersetExperiments && viewItem == experiment",
           "group": "inline"
         }
       ]
@@ -162,6 +192,10 @@
         {
           "id": "supersetDashboards",
           "name": "Dashboards"
+        },
+        {
+          "id": "supersetExperiments",
+          "name": "Experiments"
         }
       ]
     },
