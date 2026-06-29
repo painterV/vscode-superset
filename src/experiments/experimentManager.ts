@@ -101,8 +101,8 @@ export class ExperimentManager {
         const src = await this.apis.dashboards.get(dashId);
         const copy = await this.apis.dashboards.copy(dashId, {
           dashboard_title: `[${label}] ${src.dashboard_title}`,
-          json_metadata: src.json_metadata,
-          css: src.css,
+          json_metadata: src.json_metadata || "{}",
+          css: src.css || "",
         });
         exp.dashboards.push(copy.id);
         await this.apis.dashboards.update(copy.id, {

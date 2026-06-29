@@ -10,9 +10,10 @@ export interface Dashboard {
 export interface DashboardDetail {
   id: number;
   dashboard_title: string;
-  position_json: string;
-  json_metadata: string;
-  css: string;
+  // Superset returns null (not "") for unset metadata/layout — callers default.
+  position_json: string | null;
+  json_metadata: string | null;
+  css: string | null;
 }
 
 /**
