@@ -5,6 +5,14 @@
   "version": "0.0.1",
   "publisher": "wenbaoli",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/painterV/vscode-superset.git"
+  },
+  "bugs": {
+    "url": "https://github.com/painterV/vscode-superset/issues"
+  },
+  "homepage": "https://github.com/painterV/vscode-superset#readme",
   "engines": {
     "vscode": "^1.95.0"
   },
