@@ -33,6 +33,7 @@ export class LineagePanel {
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly onOpen: (kind: string, id: number) => void,
+    private readonly onDelete: (nodes: { kind: string; id: number }[]) => void,
   ) {}
 
   show(model: LineageModel): void {
@@ -51,6 +52,7 @@ export class LineagePanel {
       });
       this.panel.webview.onDidReceiveMessage((m) => {
         if (m.type === "open") this.onOpen(m.kind, m.id);
+        else if (m.type === "delete") this.onDelete(m.nodes ?? []);
       });
     }
 
@@ -83,7 +85,12 @@ export class LineagePanel {
       <select id="fobj"><option value="">—</option></select>
       <button id="fclear">Clear</button>
     </div>
-    <span class="hint">click a node to trace its full upstream + downstream · double-click a chart/dashboard to open</span>
+    <div class="actionbar">
+      <label class="chk"><input type="checkbox" id="isoOnly"> Isolated only</label>
+      <button id="selIso">Select all isolated</button>
+      <button id="del" class="danger" disabled>Delete selected (0)</button>
+    </div>
+    <span class="hint">click = trace lineage · double-click a chart/dashboard = open · ⌘/Ctrl-click = select for delete (orphans &amp; dashboards only)</span>
   </div>
   <div id="graph"></div>
   <script id="model" type="application/json">${json}</script>

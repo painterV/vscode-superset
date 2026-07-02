@@ -34,6 +34,28 @@ body {
 }
 .filterbar #fobj { min-width: 200px; }
 .filterbar button { cursor: pointer; }
+.actionbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+.actionbar .chk { display: flex; align-items: center; gap: 4px; }
+.actionbar button {
+  font-family: var(--vscode-font-family);
+  font-size: 12px;
+  border-radius: 3px;
+  padding: 2px 8px;
+  cursor: pointer;
+  color: var(--vscode-button-secondaryForeground, var(--vscode-button-foreground));
+  background: var(--vscode-button-secondaryBackground, var(--vscode-button-background));
+  border: 1px solid var(--vscode-button-border, transparent);
+}
+.actionbar button.danger {
+  color: #fff;
+  background: var(--vscode-errorForeground, #c72e2e);
+}
+.actionbar button:disabled { opacity: 0.5; cursor: default; }
 #graph {
   overflow: auto;
 }
@@ -57,6 +79,14 @@ body {
   cursor: default;
 }
 .node.chart text, .node.dash text { cursor: pointer; }
+
+/* Marked for deletion. */
+.node.sel rect {
+  stroke: var(--vscode-errorForeground, #f14c4c);
+  stroke-width: 2.5;
+  stroke-dasharray: 3 2;
+}
+#graph.dim .node.sel { opacity: 1; }
 
 /* Hover-to-trace: dim everything, then re-light the hovered node's neighbors. */
 #graph.dim .edge { opacity: 0.08; }

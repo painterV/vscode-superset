@@ -51,6 +51,15 @@ export class ChartsApi {
     return this.client.post<{ id: number }>("/api/v1/chart/", payload);
   }
 
+  /**
+   * Set the chart's dashboard membership (the chart↔dashboard M2M). This is the
+   * only reliable way to associate a chart with a dashboard via the REST API —
+   * PUTting a dashboard's position_json changes layout but not the M2M.
+   */
+  async setDashboards(id: number, dashboardIds: number[]): Promise<void> {
+    await this.client.put(`/api/v1/chart/${id}`, { dashboards: dashboardIds });
+  }
+
   /** Delete a chart by id. */
   async delete(id: number): Promise<void> {
     await this.client.del(`/api/v1/chart/${id}`);
