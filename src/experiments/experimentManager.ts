@@ -6,6 +6,13 @@ import { swapChartRefs } from "./positionJson";
 
 const KEY = "superset.experiments";
 
+/** original → clone id pairs, recorded so an experiment can be diffed against its source. */
+export interface ExperimentLinks {
+  datasets: { from: number; to: number }[];
+  charts: { from: number; to: number }[];
+  dashboards: { from: number; to: number }[];
+}
+
 export interface Experiment {
   label: string;
   connection: string;
@@ -13,6 +20,8 @@ export interface Experiment {
   datasets: number[];
   charts: number[];
   dashboards: number[];
+  // Optional: absent on experiments created before diff support.
+  links?: ExperimentLinks;
   notes?: string;
 }
 
@@ -66,12 +75,14 @@ export class ExperimentManager {
       datasets: [],
       charts: [],
       dashboards: [],
+      links: { datasets: [], charts: [], dashboards: [] },
     };
 
     try {
       // 1. duplicate the dataset
       const newDs = await this.apis.datasets.duplicate(datasetId, `[${label}] ${ds.table_name}`);
       exp.datasets.push(newDs.id);
+      exp.links!.datasets.push({ from: datasetId, to: newDs.id });
 
       // 2. clone every chart on this dataset; build original->clone id map
       const allCharts = await this.apis.charts.list();
@@ -92,22 +103,15 @@ export class ExperimentManager {
         });
         idMap.set(c.id, created.id);
         exp.charts.push(created.id);
+        exp.links!.charts.push({ from: c.id, to: created.id });
         for (const d of c.dashboards ?? []) dashboardIds.add(d.id);
       }
 
-      // 3. faithful-replica each affected dashboard: copy (shares originals),
-      //    then PUT the source layout with only our charts swapped to clones.
+      // 3. build an experiment replica of each affected dashboard.
       for (const dashId of dashboardIds) {
-        const src = await this.apis.dashboards.get(dashId);
-        const copy = await this.apis.dashboards.copy(dashId, {
-          dashboard_title: `[${label}] ${src.dashboard_title}`,
-          json_metadata: src.json_metadata || "{}",
-          css: src.css || "",
-        });
-        exp.dashboards.push(copy.id);
-        await this.apis.dashboards.update(copy.id, {
-          position_json: swapChartRefs(src.position_json, idMap),
-        });
+        const newDashId = await this.buildExperimentDashboard(dashId, idMap, label);
+        exp.dashboards.push(newDashId);
+        exp.links!.dashboards.push({ from: dashId, to: newDashId });
       }
 
       const list = this.all();
@@ -119,6 +123,130 @@ export class ExperimentManager {
       await this.teardownObjects(exp);
       throw err;
     }
+  }
+
+  /**
+   * Experiment a *dashboard* selectively (top-down): clone only the chosen
+   * charts (and, for chosen virtual datasets, their datasets), then copy the
+   * dashboard so it points at the clones for experimented charts and keeps the
+   * originals for everything else. Originals are never modified.
+   *
+   * @param chartIds   charts the user chose to experiment (clone)
+   * @param datasetIds virtual datasets the user chose to experiment; physical
+   *                   datasets are skipped (they can't be updated safely)
+   */
+  async cloneDashboard(
+    dashboardId: number,
+    label: string,
+    chartIds: Set<number>,
+    datasetIds: Set<number>,
+  ): Promise<Experiment> {
+    const allCharts = await this.apis.charts.list();
+    const inDash = allCharts.filter((c) => (c.dashboards ?? []).some((d) => d.id === dashboardId));
+
+    const exp: Experiment = {
+      label,
+      connection: this.connectionName,
+      createdAt: new Date().toISOString(),
+      datasets: [],
+      charts: [],
+      dashboards: [],
+      links: { datasets: [], charts: [], dashboards: [] },
+    };
+
+    try {
+      // 1. clone chosen datasets (virtual only) → original->clone id map
+      const dsMap = new Map<number, number>();
+      for (const dsId of datasetIds) {
+        const ds = await this.apis.datasets.get(dsId);
+        if (ds.kind !== "virtual") continue; // physical datasets stay shared
+        const created = await this.apis.datasets.duplicate(dsId, `[${label}] ${ds.table_name}`);
+        dsMap.set(dsId, created.id);
+        exp.datasets.push(created.id);
+        exp.links!.datasets.push({ from: dsId, to: created.id });
+      }
+
+      // 2. clone chosen charts, repointing to a cloned dataset when applicable
+      const chartMap = new Map<number, number>();
+      for (const c of inDash) {
+        if (!chartIds.has(c.id)) continue;
+        const detail = await this.apis.charts.get(c.id);
+        const newDsId =
+          c.datasource_type === "table" && dsMap.has(c.datasource_id)
+            ? dsMap.get(c.datasource_id)!
+            : c.datasource_id;
+        const created = await this.apis.charts.create({
+          slice_name: `[${label}] ${detail.slice_name}`,
+          viz_type: detail.viz_type,
+          datasource_id: newDsId,
+          datasource_type: c.datasource_type ?? "table",
+          params: detail.params,
+          query_context: detail.query_context ?? undefined,
+        });
+        chartMap.set(c.id, created.id);
+        exp.charts.push(created.id);
+        exp.links!.charts.push({ from: c.id, to: created.id });
+      }
+
+      // 3. build the experiment replica dashboard (clones swapped in, rest shared).
+      const newDashId = await this.buildExperimentDashboard(dashboardId, chartMap, label);
+      exp.dashboards.push(newDashId);
+      exp.links!.dashboards.push({ from: dashboardId, to: newDashId });
+
+      const list = this.all();
+      list.push(exp);
+      await this.save(list);
+      return exp;
+    } catch (err) {
+      await this.teardownObjects(exp);
+      throw err;
+    }
+  }
+
+  /**
+   * Build an experiment replica of dashboard `srcDashId`: a fresh dashboard whose
+   * layout points at the cloned charts (per `chartMap`) and shares the originals
+   * for everything else. Chart↔dashboard associations are set from the chart side
+   * — the only reliable REST path (PUTting a dashboard's position_json changes
+   * layout but never the chart M2M). Deleting the replica later cleanly detaches
+   * the shared originals without altering them.
+   *
+   * ponytail: json_metadata (native filters) is copied verbatim; a filter scope
+   * that targets an experimented chart still references the original id — fine
+   * for a sandbox, revisit if filter fidelity on clones is needed.
+   */
+  private async buildExperimentDashboard(
+    srcDashId: number,
+    chartMap: Map<number, number>,
+    label: string,
+  ): Promise<number> {
+    const src = await this.apis.dashboards.get(srcDashId);
+    // Listed AFTER clones exist, so clones' current memberships are visible too.
+    const allCharts = await this.apis.charts.list();
+    const dashesOf = new Map<number, number[]>(
+      allCharts.map((c) => [c.id, (c.dashboards ?? []).map((d) => d.id)]),
+    );
+    const inDash = allCharts.filter((c) => (dashesOf.get(c.id) ?? []).includes(srcDashId));
+
+    const created = await this.apis.dashboards.create({
+      dashboard_title: `[${label}] ${src.dashboard_title}`,
+      json_metadata: src.json_metadata || "{}",
+      css: src.css || "",
+    });
+    const newId = created.id;
+    await this.apis.dashboards.update(newId, {
+      position_json: swapChartRefs(src.position_json, chartMap),
+    });
+
+    // Associate the replica from the chart side: clone for experimented charts,
+    // the original itself for shared ones. Append (never overwrite) so a clone
+    // reused across several replicas keeps all its memberships.
+    for (const c of inDash) {
+      const chartId = chartMap.has(c.id) ? chartMap.get(c.id)! : c.id;
+      const cur = dashesOf.get(chartId) ?? [];
+      await this.apis.charts.setDashboards(chartId, [...new Set([...cur, newId])]);
+    }
+    return newId;
   }
 
   /**

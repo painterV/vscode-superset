@@ -8,10 +8,12 @@
     nodeEls: new Map(), // key -> <g>
     edgeEls: [], // [{el, a, b}]
     selected: null,
+    sel: new Set(), // keys marked for deletion
   };
 
   render(model);
   setupFilter(model);
+  setupActions();
 
   function trunc(s, n) {
     s = String(s);
@@ -92,6 +94,8 @@
       // Single click = trace lineage; double click = open in browser.
       n.addEventListener("click", (e) => {
         e.stopPropagation();
+        // ⌘/Ctrl-click = toggle delete-selection (not lineage trace).
+        if (e.metaKey || e.ctrlKey) { toggleDel(key, n.dataset.kind); return; }
         if (clickTimer) return;
         clickTimer = setTimeout(() => { clickTimer = null; toggleSelect(key); }, 200);
       });
@@ -158,6 +162,83 @@
     clearAll();
   }
 
+  // --- Deletion selection ---------------------------------------------------
+
+  /** Real Superset id for a node (dataset keys carry a "ds" prefix). */
+  function realId(kind, id) {
+    return kind === "dataset" ? Number(String(id).replace(/^ds/, "")) : Number(id);
+  }
+  /** Message kind: the graph column "dash" maps to the API's "dashboard". */
+  function postKind(kind) {
+    return kind === "dash" ? "dashboard" : kind;
+  }
+  /** Orphan = nothing depends on it: unused dataset, chart on no dashboard, empty dashboard. */
+  function isOrphan(key, kind) {
+    if (kind === "dash") return !(G.back.get(key)?.size);
+    if (kind === "dataset" || kind === "chart") return !(G.fwd.get(key)?.size);
+    return false;
+  }
+  /** A node may be deleted if it's a dashboard (terminal) or an orphan dataset/chart. */
+  function selectable(key, kind) {
+    return kind === "dash" || ((kind === "dataset" || kind === "chart") && isOrphan(key, kind));
+  }
+
+  function toggleDel(key, kind) {
+    if (!selectable(key, kind)) return;
+    if (G.sel.has(key)) G.sel.delete(key);
+    else G.sel.add(key);
+    G.nodeEls.get(key)?.classList.toggle("sel", G.sel.has(key));
+    updateDelBtn();
+  }
+  function updateDelBtn() {
+    const btn = document.getElementById("del");
+    btn.textContent = `Delete selected (${G.sel.size})`;
+    btn.disabled = G.sel.size === 0;
+  }
+  function clearDelSel() {
+    G.sel.forEach((k) => G.nodeEls.get(k)?.classList.remove("sel"));
+    G.sel.clear();
+    updateDelBtn();
+  }
+
+  function setupActions() {
+    const isoOnly = document.getElementById("isoOnly");
+    const selIso = document.getElementById("selIso");
+    const del = document.getElementById("del");
+
+    // "Isolated only" dims everything except orphan nodes.
+    isoOnly.addEventListener("change", () => {
+      const root = document.getElementById("graph");
+      if (isoOnly.checked) {
+        root.classList.add("dim");
+        G.nodeEls.forEach((el, key) => el.classList.toggle("hot", isOrphan(key, el.dataset.kind)));
+        for (const { el } of G.edgeEls) el.classList.remove("hot");
+      } else {
+        clearAll();
+      }
+    });
+
+    selIso.addEventListener("click", () => {
+      G.nodeEls.forEach((el, key) => {
+        if (isOrphan(key, el.dataset.kind) && !G.sel.has(key)) {
+          G.sel.add(key);
+          el.classList.add("sel");
+        }
+      });
+      updateDelBtn();
+    });
+
+    del.addEventListener("click", () => {
+      if (!G.sel.size) return;
+      const nodes = [...G.sel].map((key) => {
+        const el = G.nodeEls.get(key);
+        return { kind: postKind(el.dataset.kind), id: realId(el.dataset.kind, el.dataset.id) };
+      });
+      vscode.postMessage({ type: "delete", nodes });
+    });
+    updateDelBtn();
+  }
+
   function setupFilter(model) {
     const ftype = document.getElementById("ftype");
     const fobj = document.getElementById("fobj");
@@ -180,7 +261,10 @@
     });
     fobj.addEventListener("change", () => { if (fobj.value) selectNode(fobj.value); });
     fclear.addEventListener("click", () => {
-      ftype.value = ""; fobj.innerHTML = '<option value="">—</option>'; clearSelection();
+      ftype.value = ""; fobj.innerHTML = '<option value="">—</option>';
+      clearSelection(); clearDelSel();
+      const iso = document.getElementById("isoOnly");
+      if (iso.checked) { iso.checked = false; clearAll(); }
     });
   }
 })();

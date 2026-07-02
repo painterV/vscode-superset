@@ -38,24 +38,16 @@ export class DashboardsApi {
   }
 
   /**
-   * Copy a dashboard (shares the original charts; duplicate_slices is always
-   * false). The copy drops position_json — callers re-apply it via update().
-   * Returns the new dashboard id.
+   * Create a new dashboard. Charts are NOT associated here — the caller wires
+   * them from the chart side (see ChartsApi.setDashboards), because the
+   * dashboard's chart M2M can't be set through position_json.
    */
-  async copy(
-    id: number,
-    opts: { dashboard_title: string; json_metadata: string; css: string },
-  ): Promise<{ id: number }> {
-    const resp = await this.client.post<{ result: { id: number } }>(
-      `/api/v1/dashboard/${id}/copy/`,
-      {
-        dashboard_title: opts.dashboard_title,
-        duplicate_slices: false,
-        css: opts.css,
-        json_metadata: opts.json_metadata,
-      },
-    );
-    return resp.result;
+  async create(opts: {
+    dashboard_title: string;
+    json_metadata: string;
+    css: string;
+  }): Promise<{ id: number }> {
+    return this.client.post<{ id: number }>("/api/v1/dashboard/", opts);
   }
 
   /** Update a dashboard (used to set position_json with swapped chart refs). */

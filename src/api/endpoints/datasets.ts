@@ -10,6 +10,8 @@ export interface Dataset {
 
 export interface DatasetDetail extends Dataset {
   kind: string;
+  // The SQL for a virtual dataset (null for physical). Used by experiment diff.
+  sql: string | null;
 }
 
 /** Thin wrapper around Superset's /api/v1/dataset/ endpoint. */

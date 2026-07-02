@@ -1,10 +1,12 @@
 {
   "name": "vscode-superset",
-  "displayName": "Superset",
+  "displayName": "Superset Studio",
+  "icon": "media/icon.png",
   "description": "Connect to Apache Superset — Jinja-SQL editing, query execution, object browser",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "wenbaoli",
   "license": "MIT",
+  "icon": "media/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/painterV/vscode-superset.git"
@@ -78,7 +80,18 @@
       },
       {
         "command": "superset.refreshConnections",
-        "title": "Superset: Refresh"
+        "title": "Superset: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "superset.refreshSavedQueries",
+        "title": "Refresh Saved Queries",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "superset.refreshDashboards",
+        "title": "Refresh Dashboards",
+        "icon": "$(refresh)"
       },
       {
         "command": "superset.addConnection",
@@ -110,6 +123,16 @@
         "icon": "$(beaker)"
       },
       {
+        "command": "superset.experimentDashboard",
+        "title": "Superset: Experiment on a Dashboard",
+        "icon": "$(type-hierarchy-sub)"
+      },
+      {
+        "command": "superset.diffExperiment",
+        "title": "Show Diff",
+        "icon": "$(diff)"
+      },
+      {
         "command": "superset.deleteExperiment",
         "title": "Delete Experiment",
         "icon": "$(trash)"
@@ -125,15 +148,35 @@
         {
           "command": "superset.addConnection",
           "when": "view == supersetConnections",
+          "group": "navigation@1"
+        },
+        {
+          "command": "superset.refreshConnections",
+          "when": "view == supersetConnections",
+          "group": "navigation@2"
+        },
+        {
+          "command": "superset.refreshSavedQueries",
+          "when": "view == supersetSavedQueries",
           "group": "navigation"
         },
         {
           "command": "superset.showLineage",
           "when": "view == supersetDashboards",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "command": "superset.refreshDashboards",
+          "when": "view == supersetDashboards",
+          "group": "navigation@2"
         },
         {
           "command": "superset.cloneExperiment",
+          "when": "view == supersetExperiments",
+          "group": "navigation"
+        },
+        {
+          "command": "superset.experimentDashboard",
           "when": "view == supersetExperiments",
           "group": "navigation"
         },
@@ -152,6 +195,11 @@
         {
           "command": "superset.openDashboardInBrowser",
           "when": "view == supersetDashboards && viewItem == dashboard",
+          "group": "inline"
+        },
+        {
+          "command": "superset.diffExperiment",
+          "when": "view == supersetExperiments && viewItem == experiment",
           "group": "inline"
         },
         {
