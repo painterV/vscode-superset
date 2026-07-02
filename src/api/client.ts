@@ -53,12 +53,20 @@ export class SupersetClient {
     return this.mutate<T>("PUT", path, body);
   }
 
-  /** Issue a DELETE request. */
+  /**
+   * Issue a DELETE request. Idempotent: a 404 means the object is already gone
+   * (e.g. deleted manually in Superset), which is the desired end state — so it
+   * is treated as success. This lets experiment teardown finish and drop its
+   * manifest entry even when some objects were removed outside the extension.
+   */
   async del(path: string): Promise<void> {
     const resp = await this.fetchFn(`${this.auth.getBaseUrl()}${path}`, {
       method: "DELETE",
       headers: await this.buildHeaders(true),
     });
+    if (resp.status === 404) {
+      return;
+    }
     if (!resp.ok) {
       await this.throwApiError(resp);
     }
